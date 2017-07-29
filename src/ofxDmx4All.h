@@ -4,6 +4,9 @@
 #include <ofSerial.h> 
 
 class ofxDmx4All {
+    
+    static const int BAUD_RATE;
+    
 public:
 	ofxDmx4All();
 	~ofxDmx4All();
@@ -22,6 +25,17 @@ public:
 	
 	void setChannels(unsigned int channels = 24); // change the number of channels
 	bool isConnected();
+    
+    bool autoconnect(unsigned int channels = 24);
+    
+private:
+    
+    bool checkConnection(int portNum);
+    
+    bool sendPin();
+    
+    bool receivedOk();
+    
 	
 private:	
 	int connected;

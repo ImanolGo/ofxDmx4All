@@ -2,6 +2,8 @@
 #include "ofMain.h"
 
 
+const int ofxDmx4All::BAUD_RATE = 38400;
+
 ofxDmx4All::ofxDmx4All() :connected(false), needsUpdate(false) {
 }
 
@@ -12,17 +14,108 @@ ofxDmx4All::~ofxDmx4All() {
 
 bool ofxDmx4All::connect(int device, unsigned int channels) {
 	serial.listDevices();
-	connected = serial.setup(device, 38400); 
+	connected = serial.setup(device, BAUD_RATE);
 	setChannels(channels);
 	return connected;
 }
 
 bool ofxDmx4All::connect(string device, unsigned int channels) {
 	serial.listDevices();
-	connected = serial.setup(device.c_str(), 38400);
+	connected = serial.setup(device.c_str(), BAUD_RATE);
 	setChannels(channels);
 	return connected;
 }
+
+bool ofxDmx4All::autoconnect(unsigned int channels)
+{
+    serial.listDevices();
+    vector <ofSerialDeviceInfo> deviceList = serial.getDeviceList();
+    
+    for(auto device: deviceList)
+    {
+        if(this->checkConnection(device.getDeviceID())) //open a device number
+        {
+            this->connect(device.getDeviceID(), channels);
+            ofLogNotice() <<"Dmx4All connected to port " << device.getDeviceName();
+            break;
+        }
+    }
+}
+
+bool ofxDmx4All::checkConnection(int portNum)
+{
+    if(serial.setup(portNum, BAUD_RATE)) //open a device number
+    {
+        this->sendPin();
+        ofSleepMillis(50);
+        if(this->receivedOk()){
+            ofLogNotice() <<"Dmx4All connected to " << portNum;
+            return true;
+        }
+    }
+    
+    ofLogError() <<" Dmx4All is not connected ";
+    //m_serial.setup(0, BAUD_RATE);
+    return false;
+    
+}
+
+bool ofxDmx4All::sendPin()
+{
+    unsigned int packetSize = 2;
+    vector<unsigned char> packet(packetSize);
+    
+    // Check Connection
+    packet[0] = 'C';
+    packet[1] = '?';
+    
+    serial.writeBytes(&packet[0], packetSize);
+}
+
+bool ofxDmx4All::receivedOk()
+{
+    if ( serial.available() == 0 )
+    {
+        return false;
+    }
+    
+    /// // we want to read 1 bytes
+    int bytesRequired = 1;
+    unsigned char bytes[bytesRequired];
+    int bytesRemaining = bytesRequired;
+    // loop until we've read everything
+    while ( bytesRemaining > 0 ){
+        // check for data
+        if ( serial.available() > 0 ){
+            // try to read - note offset into the bytes[] array, this is so
+            // that we don't overwrite the bytes we already have
+            int bytesArrayOffset = bytesRequired - bytesRemaining;
+            int result = serial.readBytes( &bytes[bytesArrayOffset], bytesRemaining );
+            
+            // check for error code
+            if ( result == OF_SERIAL_ERROR ){
+                // something bad happened
+                ofLog( OF_LOG_ERROR, "unrecoverable error reading from serial" );
+                break;
+            }
+            else if ( result == OF_SERIAL_NO_DATA ){
+                // nothing was read, try again
+            }
+            else {
+                // we read some data!
+                bytesRemaining -= result;
+            }
+        }
+    }
+    
+    if(bytes[0] == 'G'){
+        ofLogNotice() <<" Dmx4All checked connection with a G";
+        return true;
+    }
+    
+    return true;
+}
+
 
 bool ofxDmx4All::isConnected() {
 	return connected;
