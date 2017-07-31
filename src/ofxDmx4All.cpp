@@ -37,9 +37,11 @@ bool ofxDmx4All::autoconnect(unsigned int channels)
         {
             this->connect(device.getDeviceID(), channels);
             ofLogNotice() <<"Dmx4All connected to port " << device.getDeviceName();
-            break;
+			return true;
         }
     }
+
+	return false;
 }
 
 bool ofxDmx4All::checkConnection(int portNum)
@@ -50,8 +52,12 @@ bool ofxDmx4All::checkConnection(int portNum)
         ofSleepMillis(50);
         if(this->receivedOk()){
             ofLogNotice() <<"Dmx4All connected to " << portNum;
+			serial.close();
             return true;
         }
+		else {
+			serial.close();
+		}
     }
     
     ofLogError() <<" Dmx4All is not connected ";
@@ -60,7 +66,7 @@ bool ofxDmx4All::checkConnection(int portNum)
     
 }
 
-bool ofxDmx4All::sendPin()
+void ofxDmx4All::sendPin()
 {
     unsigned int packetSize = 2;
     vector<unsigned char> packet(packetSize);
@@ -81,7 +87,7 @@ bool ofxDmx4All::receivedOk()
     
     /// // we want to read 1 bytes
     int bytesRequired = 1;
-    unsigned char bytes[bytesRequired];
+    unsigned char bytes[1];
     int bytesRemaining = bytesRequired;
     // loop until we've read everything
     while ( bytesRemaining > 0 ){
@@ -113,7 +119,7 @@ bool ofxDmx4All::receivedOk()
         return true;
     }
     
-    return true;
+    return false;
 }
 
 
